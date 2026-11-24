@@ -53,6 +53,7 @@ module YtMd
       code == wanted || code.start_with?("#{wanted}-")
     end
 
+    # Player baseUrl is usually fmt=srv3 XML. CaptionCues only parses json3.
     def timedtext_url
       uri = URI.parse(base_url)
       params = URI.decode_www_form(uri.query.to_s)

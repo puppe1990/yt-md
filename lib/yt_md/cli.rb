@@ -35,6 +35,7 @@ module YtMd
     def write_channel_video(video, index, total, dir, options)
       path = File.join(dir, "#{video.video_id}.md")
       label = "#{index + 1}/#{total} #{video.video_id}"
+      # Channel dumps resume by leaving existing markdown in place.
       if File.exist?(path)
         @stdout.puts("skip #{label} exists")
         return

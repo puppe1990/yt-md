@@ -8,6 +8,7 @@ module YtMd
 
   # Turns YouTube json3 timedtext into timed cues and a plain paragraph.
   class CaptionCues
+    # ASR injects these as whole events; they are not spoken words.
     SKIP = /\A(\[Music\]|\[Applause\]|\[Laughter\]|\[Musik\])\z/i
 
     class Invalid < ArgumentError; end

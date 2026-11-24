@@ -18,7 +18,9 @@
     "lint:ruby": "bundle exec rubocop",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "ci": "npm run format:check && npm run lint && npm run lint:ruby && npm test",
+    "crap": "bundle exec rake crap",
+    "dry": "bundle exec rake dry",
+    "ci": "npm run format:check && npm run lint && npm run lint:ruby && npm test && npm run crap && npm run dry",
     "prepare": "husky"
   },
   "lint-staged": {

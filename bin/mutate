@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require_relative "../tools/method_mutate"
+
+status = MethodMutate.run_sites(
+  MethodMutate.sites_in_lib(File.expand_path("../lib/**/*.rb", __dir__)),
+  test_command: "SKIP_SIMPLECOV=1 bundle exec rake test",
+  stdout: $stdout
+)
+exit status

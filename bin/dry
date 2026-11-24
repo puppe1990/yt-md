@@ -1,0 +1,19 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require_relative "../tools/method_dry"
+
+threshold = 0.8
+argv = ARGV.dup
+if (index = argv.index("--threshold"))
+  threshold = Float(argv[index + 1])
+end
+
+status = MethodDry.report(
+  lib_glob: File.expand_path("../lib/**/*.rb", __dir__),
+  stdout: $stdout,
+  threshold: threshold,
+  min_lines: 4,
+  min_nodes: 20
+)
+exit status

@@ -6,3 +6,4 @@ gem "faker"
 gem "minitest"
 gem "rake"
 gem "rubocop", "~> 1.88.2", require: false
+gem "simplecov", require: false

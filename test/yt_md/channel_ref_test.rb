@@ -3,10 +3,6 @@
 require_relative "../test_helper"
 
 class ChannelRefTest < YtMdTest
-  def fake_channel_id
-    "UC#{Faker::Alphanumeric.alphanumeric(number: 22)}"
-  end
-
   def test_parses_handle
     ref = YtMd::ChannelRef.parse("@a16z")
 
@@ -23,7 +19,7 @@ class ChannelRefTest < YtMdTest
   end
 
   def test_parses_uc_channel_id
-    channel_id = fake_channel_id
+    channel_id = fake_browse_id
     ref = YtMd::ChannelRef.parse(channel_id)
 
     assert_equal channel_id, ref.browse_id
@@ -31,7 +27,7 @@ class ChannelRefTest < YtMdTest
   end
 
   def test_parses_channel_uc_url
-    channel_id = fake_channel_id
+    channel_id = fake_browse_id
     ref = YtMd::ChannelRef.parse("https://www.youtube.com/channel/#{channel_id}")
 
     assert_equal channel_id, ref.browse_id

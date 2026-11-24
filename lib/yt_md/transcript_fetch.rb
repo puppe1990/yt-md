@@ -6,24 +6,14 @@ module YtMd
 
   # Loads Innertube player + json3 timedtext for one video id.
   class TranscriptFetch
-    PLAYER_URL = "https://www.youtube.com/youtubei/v1/player?prettyPrint=false"
-    ANDROID = {
-      "context" => {
-        "client" => {
-          "clientName" => "ANDROID",
-          "clientVersion" => "20.10.38",
-          "hl" => "en",
-          "gl" => "US"
-        }
-      }
-    }.freeze
-
     def initialize(http:)
       @http = http
     end
 
     def call(video_id, language:, timedtext: nil)
-      payload = PlayerPayload.parse(@http.post(PLAYER_URL, json: ANDROID.merge("videoId" => video_id)))
+      payload = PlayerPayload.parse(
+        @http.post(Innertube::PLAYER_URL, json: Innertube::ANDROID.merge("videoId" => video_id))
+      )
       track = CaptionTrack.pick(payload.tracks, language: language)
       body = timedtext || @http.get(track.timedtext_url)
       cues = CaptionCues.parse(body)
