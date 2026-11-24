@@ -1,0 +1,18 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require_relative "../tools/method_crap"
+
+threshold = 10.0
+argv = ARGV.dup
+if (index = argv.index("--threshold"))
+  threshold = Float(argv[index + 1])
+end
+
+status = MethodCrap.report(
+  lib_glob: File.expand_path("../lib/**/*.rb", __dir__),
+  resultset_path: File.expand_path("../coverage/.resultset.json", __dir__),
+  stdout: $stdout,
+  threshold: threshold
+)
+exit status

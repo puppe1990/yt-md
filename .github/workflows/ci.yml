@@ -49,3 +49,9 @@ jobs:
 
       - name: Tests
         run: npm test
+
+      - name: CRAP
+        run: bundle exec rake crap
+
+      - name: Dry
+        run: bundle exec rake dry
