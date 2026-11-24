@@ -51,8 +51,8 @@ module YtMd
       @cues.map { |cue| "**#{clock(cue.start_ms)}** #{cue.text}" }.join("\n\n")
     end
 
-    def clock(ms)
-      total = Integer(ms) / 1000
+    def clock(millis)
+      total = Integer(millis) / 1000
       hours, rem = total.divmod(3600)
       minutes, seconds = rem.divmod(60)
       return format("%02d:%02d:%02d", hours, minutes, seconds) if hours.positive?

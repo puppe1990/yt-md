@@ -4,17 +4,48 @@ on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
-  test:
+  quality:
+    name: Lint, format & tests
     runs-on: ubuntu-latest
+    env:
+      HUSKY: '0'
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout
+        uses: actions/checkout@v5
 
-      - uses: ruby/setup-ruby@v1
+      - name: Setup Node
+        uses: actions/setup-node@v5
         with:
-          ruby-version: "3.4"
+          node-version: 22
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
           bundler-cache: true
 
+      - name: Prettier
+        run: npm run format:check
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: RuboCop
+        run: npm run lint:ruby
+
       - name: Tests
-        run: bundle exec rake test
+        run: npm test

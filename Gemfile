@@ -2,6 +2,7 @@
 
 source "https://rubygems.org"
 
-gem "rake"
-gem "minitest"
 gem "faker"
+gem "minitest"
+gem "rake"
+gem "rubocop", "~> 1.88.2", require: false

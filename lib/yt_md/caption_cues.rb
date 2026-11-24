@@ -3,6 +3,7 @@
 require "json"
 
 module YtMd
+  # One timedtext event after skip filters.
   Cue = Struct.new(:start_ms, :end_ms, :text, keyword_init: true)
 
   # Turns YouTube json3 timedtext into timed cues and a plain paragraph.
@@ -71,7 +72,7 @@ module YtMd
 
       def plain_text
         joined = @cues.map(&:text).join(" ")
-        joined.gsub(/\s+([,.\?!:;])/, '\1').gsub(/\s+/, " ").strip
+        joined.gsub(/\s+([,.?!:;])/, '\1').gsub(/\s+/, " ").strip
       end
     end
   end

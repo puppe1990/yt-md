@@ -39,7 +39,7 @@ module YtMd
       return if status.empty? || status == "OK"
 
       reason = json.dig("playabilityStatus", "reason").to_s
-      raise Unplayable, %(player unplayable: received "#{status}"#{reason.empty? ? "" : " (#{reason})"})
+      raise Unplayable, %(player unplayable: received "#{status}"#{reason.empty? ? '' : " (#{reason})"})
     end
 
     def caption_tracks(json)
