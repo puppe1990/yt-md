@@ -4,6 +4,7 @@
 module YtMd
 end
 
+require_relative "yt_md/innertube"
 require_relative "yt_md/video_id"
 require_relative "yt_md/channel_ref"
 require_relative "yt_md/channel_browse"

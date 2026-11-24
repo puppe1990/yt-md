@@ -4,93 +4,25 @@ require "stringio"
 require_relative "../test_helper"
 
 class ChannelCliTest < YtMdTest
-  FakeHttp = Struct.new(:posts, :gets, keyword_init: true) do
-    def get(url, **_)
-      gets.fetch(url) { raise "unexpected GET #{url}" }
-    end
-
-    def post(url, json:, **_)
-      return posts.fetch(json.fetch("url")) if url.include?("resolve_url")
-      return posts.fetch(json["continuation"] || json["browseId"]) if url.include?("/browse")
-      return posts.fetch(json.fetch("videoId")) if url.include?("/player")
-
-      raise "unexpected POST #{url}"
-    end
-  end
-
-  def lockup(video_id, title)
-    {
-      "richItemRenderer" => {
-        "content" => {
-          "lockupViewModel" => {
-            "contentId" => video_id,
-            "contentType" => "LOCKUP_CONTENT_TYPE_VIDEO",
-            "metadata" => {
-              "lockupMetadataViewModel" => { "title" => { "content" => title } }
-            }
-          }
-        }
-      }
-    }
-  end
-
-  def videos_page(items)
-    JSON.generate(
-      "contents" => {
-        "twoColumnBrowseResultsRenderer" => {
-          "tabs" => [
-            {
-              "tabRenderer" => {
-                "selected" => true,
-                "title" => "Videos",
-                "content" => { "richGridRenderer" => { "contents" => items } }
-              }
-            }
-          ]
-        }
-      }
-    )
-  end
-
-  def player_for(video_id:, title:, channel:, timedtext_url:)
-    JSON.generate(
-      "playabilityStatus" => { "status" => "OK" },
-      "videoDetails" => {
-        "videoId" => video_id,
-        "title" => title,
-        "author" => channel,
-        "lengthSeconds" => "120"
-      },
-      "captions" => {
-        "playerCaptionsTracklistRenderer" => {
-          "captionTracks" => [
-            { "languageCode" => "en", "kind" => "asr", "baseUrl" => timedtext_url }
-          ]
-        }
-      }
-    )
-  end
-
   def channel_http(videos)
-    browse_id = "UC#{Faker::Alphanumeric.alphanumeric(number: 22)}"
+    browse_id = fake_browse_id
     posts = {
-      "https://www.youtube.com/@a16z" => JSON.generate(
-        "endpoint" => { "browseEndpoint" => { "browseId" => browse_id } }
-      ),
-      browse_id => videos_page(videos.map { |row| lockup(row[:id], row[:title]) })
+      "https://www.youtube.com/@a16z" => resolve_url_json(browse_id),
+      browse_id => videos_tab_page(videos.map { |row| videos_tab_lockup(row[:id], row[:title]) })
     }
     gets = {}
     videos.each do |row|
-      timedtext_url = "https://www.youtube.com/api/timedtext?v=#{row[:id]}&lang=en&kind=asr"
-      posts[row[:id]] = player_for(
+      timedtext_url = timedtext_url_for(row[:id])
+      posts[row[:id]] = player_payload_json(
         video_id: row[:id],
         title: row[:title],
         channel: "a16z",
-        timedtext_url: timedtext_url
+        timedtext_url: timedtext_url,
+        length: "120"
       )
       gets["#{timedtext_url}&fmt=json3"] = json3_body([{ start_ms: 0, text: [row[:quote]] }])
     end
-    FakeHttp.new(posts: posts, gets: gets)
+    FakeInnertube.new(posts: posts, gets: gets)
   end
 
   def test_writes_one_markdown_file_per_channel_video

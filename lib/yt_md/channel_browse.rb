@@ -8,21 +8,9 @@ module YtMd
 
   # Pages the channel Videos tab through Innertube WEB browse.
   class ChannelBrowse
-    BROWSE_URL = "https://www.youtube.com/youtubei/v1/browse?prettyPrint=false"
-    RESOLVE_URL = "https://www.youtube.com/youtubei/v1/navigation/resolve_url?prettyPrint=false"
-    VIDEOS_TAB = "EgZ2aWRlb3PyBgQKAjoA"
-    WEB_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) " \
-             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
-    WEB = {
-      "context" => {
-        "client" => {
-          "clientName" => "WEB",
-          "clientVersion" => "2.20251120.01.00",
-          "hl" => "en",
-          "gl" => "US"
-        }
-      }
-    }.freeze
+    CONTINUATION_TOKEN_PATH = %w[
+      continuationItemRenderer continuationEndpoint continuationCommand token
+    ].freeze
 
     class Missing < ArgumentError; end
 
@@ -34,30 +22,37 @@ module YtMd
       browse_id = resolve(ref)
       collected = []
       token = nil
-      seen = {}
+      # Tokens and video ids are different identities. One Hash would skip a
+      # video whose id equalled a continuation token already seen.
+      seen_ids = {}
+      seen_tokens = {}
       loop do
         page_videos, token = parse_page(JSON.parse(browse(browse_id, token)))
-        page_videos.each do |video|
-          next if seen[video.video_id]
+        return collected if take_page(collected, seen_ids, page_videos, limit)
+        break if page_videos.empty? || token.nil? || seen_tokens[token]
 
-          seen[video.video_id] = true
-          collected << video
-          return collected.first(limit) if limit && collected.length >= limit
-        end
-        break if page_videos.empty?
-        break if token.nil? || seen[token]
-
-        seen[token] = true
+        seen_tokens[token] = true
       end
       collected
     end
 
     private
 
+    def take_page(collected, seen_ids, page_videos, limit)
+      page_videos.each do |video|
+        next if seen_ids[video.video_id]
+
+        seen_ids[video.video_id] = true
+        collected << video
+        return true if limit && collected.length >= limit
+      end
+      false
+    end
+
     def resolve(ref)
       return ref.browse_id if ref.browse_id
 
-      body = JSON.parse(post(RESOLVE_URL, WEB.merge("url" => ref.url)))
+      body = JSON.parse(post(Innertube::RESOLVE_URL, Innertube::WEB.merge("url" => ref.url)))
       browse_id = body.dig("endpoint", "browseEndpoint", "browseId").to_s
       return browse_id unless browse_id.empty?
 
@@ -65,12 +60,16 @@ module YtMd
     end
 
     def browse(browse_id, token)
-      payload = token ? WEB.merge("continuation" => token) : WEB.merge("browseId" => browse_id, "params" => VIDEOS_TAB)
-      post(BROWSE_URL, payload)
+      payload = if token
+                  Innertube::WEB.merge("continuation" => token)
+                else
+                  Innertube::WEB.merge("browseId" => browse_id, "params" => Innertube::VIDEOS_TAB)
+                end
+      post(Innertube::BROWSE_URL, payload)
     end
 
     def post(url, json)
-      @http.post(url, json: json, user_agent: WEB_UA)
+      @http.post(url, json: json, user_agent: Innertube::WEB_UA)
     end
 
     def parse_page(json)
@@ -79,8 +78,7 @@ module YtMd
       grid_items(json).each do |item|
         if (video = video_from(item))
           videos << video
-        elsif (next_token = item.dig("continuationItemRenderer", "continuationEndpoint", "continuationCommand",
-                                     "token"))
+        elsif (next_token = item.dig(*CONTINUATION_TOKEN_PATH))
           token = next_token
         end
       end

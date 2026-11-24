@@ -3,32 +3,15 @@
 require_relative "../test_helper"
 
 class PlayerPayloadTest < YtMdTest
-  def player_json(video_id:, title:, author:, tracks:, status: "OK", reason: nil, length: "3135")
-    JSON.generate(
-      "playabilityStatus" => { "status" => status, "reason" => reason },
-      "videoDetails" => {
-        "videoId" => video_id,
-        "title" => title,
-        "author" => author,
-        "lengthSeconds" => length
-      },
-      "captions" => {
-        "playerCaptionsTracklistRenderer" => {
-          "captionTracks" => tracks
-        }
-      }
-    )
-  end
-
   def test_reads_video_details_and_tracks
     video_id = fake_video_id
     title = fake_title
-    author = fake_channel
+    channel = fake_channel
     payload = YtMd::PlayerPayload.parse(
-      player_json(
+      player_payload_json(
         video_id: video_id,
         title: title,
-        author: author,
+        channel: channel,
         tracks: [
           {
             "languageCode" => "en",
@@ -41,17 +24,15 @@ class PlayerPayloadTest < YtMdTest
 
     assert_equal video_id, payload.video_id
     assert_equal title, payload.title
-    assert_equal author, payload.channel
+    assert_equal channel, payload.channel
     assert_equal 3135, payload.duration_seconds
     assert_equal 1, payload.tracks.length
   end
 
   def test_rejects_unplayable_status
     video_id = fake_video_id
-    body = player_json(
+    body = player_payload_json(
       video_id: video_id,
-      title: fake_title,
-      author: fake_channel,
       tracks: [],
       status: "LOGIN_REQUIRED",
       reason: "Sign in"
@@ -63,12 +44,7 @@ class PlayerPayloadTest < YtMdTest
   end
 
   def test_rejects_missing_caption_tracks
-    body = player_json(
-      video_id: fake_video_id,
-      title: fake_title,
-      author: fake_channel,
-      tracks: []
-    )
+    body = player_payload_json(video_id: fake_video_id, tracks: [])
     error = assert_raises(YtMd::PlayerPayload::Unplayable) { YtMd::PlayerPayload.parse(body) }
 
     assert_match(/no captionTracks/, error.message)

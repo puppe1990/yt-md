@@ -7,6 +7,16 @@ module YtMd
   Options = Struct.new(:video_id, :channel, :output, :language, :timestamps, :json3_path, :limit, :sleep,
                        keyword_init: true) do
     def self.parse(argv)
+      flags = parse_flags(argv)
+      input = flags.delete(:input)
+      if ChannelRef.match?(input)
+        new(video_id: nil, channel: ChannelRef.parse(input), **flags)
+      else
+        new(video_id: VideoId.parse(input), channel: nil, **flags)
+      end
+    end
+
+    def self.parse_flags(argv)
       language = "en"
       timestamps = false
       output = nil
@@ -22,31 +32,16 @@ module YtMd
         opts.on("--limit N", Integer, "Stop after N channel videos") { |value| limit = value }
         opts.on("--sleep SECONDS", Float, "Pause between channel videos") { |value| sleep = value }
       end
-      rest = parser.parse(argv)
-      input = rest.first
-      if ChannelRef.match?(input)
-        return new(
-          video_id: nil,
-          channel: ChannelRef.parse(input),
-          output: output,
-          language: language,
-          timestamps: timestamps,
-          json3_path: json3_path,
-          limit: limit,
-          sleep: sleep
-        )
-      end
-
-      new(
-        video_id: VideoId.parse(input),
-        channel: nil,
+      {
+        input: parser.parse(argv).first,
         output: output,
         language: language,
         timestamps: timestamps,
         json3_path: json3_path,
         limit: limit,
         sleep: sleep
-      )
+      }
     end
+    private_class_method :parse_flags
   end
 end
