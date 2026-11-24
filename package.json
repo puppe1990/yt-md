@@ -1,0 +1,45 @@
+{
+  "name": "yt-md",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "YouTube captions to markdown via Innertube.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/puppe1990/yt-md.git"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "bundle exec rake test",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix",
+    "lint:ruby": "bundle exec rubocop",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "ci": "npm run format:check && npm run lint && npm run lint:ruby && npm test",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,mjs,cjs}": [
+      "eslint --fix --max-warnings 0",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml,html,css}": [
+      "prettier --write"
+    ],
+    "*.rb": [
+      "bundle exec rubocop -A --force-exclusion"
+    ]
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.15.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.14.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.10.1"
+  }
+}
