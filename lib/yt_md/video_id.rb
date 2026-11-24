@@ -4,7 +4,7 @@ module YtMd
   # Pulls the 11-character YouTube id out of a bare id or a watch/share URL.
   class VideoId
     PATTERN = /[A-Za-z0-9_-]{11}/
-    WATCH = %r{[?&]v=(#{PATTERN})}
+    WATCH = /[?&]v=(#{PATTERN})/
     PATH = %r{(?:youtu\.be/|youtube\.com/(?:shorts|embed|live)/)(#{PATTERN})}
 
     class Invalid < ArgumentError; end

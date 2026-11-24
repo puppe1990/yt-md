@@ -5,7 +5,9 @@ YouTube watch URL or id → markdown transcript. Innertube ANDROID player + json
 ## Commands
 
 - `bundle exec rake test` — full suite, one command, no live YouTube
+- `npm run ci` — Prettier, ESLint, RuboCop, then the suite
 - `ruby yt_md.rb URL [-o FILE] [--lang en] [--timestamps] [--json3 FILE]` — live fetch
+- `ruby yt_md.rb @handle -o DIR [--limit N] [--sleep 0.4]` — Videos tab, one markdown per video
 
 ## Layout
 

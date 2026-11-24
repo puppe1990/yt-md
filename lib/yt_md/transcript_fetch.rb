@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module YtMd
+  # Player metadata plus parsed json3 cues for one video.
   Transcript = Struct.new(:meta, :cues, keyword_init: true)
 
   # Loads Innertube player + json3 timedtext for one video id.

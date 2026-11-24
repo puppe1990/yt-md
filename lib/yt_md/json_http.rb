@@ -9,23 +9,23 @@ module YtMd
   class JsonHttp
     USER_AGENT = "com.google.android.youtube/20.10.38 (Linux; U; Android 14) gzip"
 
-    def get(url)
-      request(url, Net::HTTP::Get.new(URI.parse(url)))
+    def get(url, user_agent: USER_AGENT)
+      request(url, Net::HTTP::Get.new(URI.parse(url)), user_agent: user_agent)
     end
 
-    def post(url, json:)
+    def post(url, json:, user_agent: USER_AGENT)
       uri = URI.parse(url)
       request_obj = Net::HTTP::Post.new(uri)
       request_obj["Content-Type"] = "application/json"
       request_obj.body = JSON.generate(json)
-      request(url, request_obj)
+      request(url, request_obj, user_agent: user_agent)
     end
 
     private
 
-    def request(url, request_obj)
+    def request(url, request_obj, user_agent: USER_AGENT)
       uri = URI.parse(url)
-      request_obj["User-Agent"] = USER_AGENT
+      request_obj["User-Agent"] = user_agent
       response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https") do |http|
         http.request(request_obj)
       end

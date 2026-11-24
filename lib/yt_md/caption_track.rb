@@ -16,7 +16,7 @@ module YtMd
     def self.new_from_list(tracks, language:)
       wanted = language.to_s.downcase
       matches = Array(tracks).filter_map { |raw| from_raw(raw) }
-                            .select { |track| track.matches?(wanted) }
+        .select { |track| track.matches?(wanted) }
       raise missing(wanted, tracks) if matches.empty?
 
       matches.min_by { |track| track.kind == "asr" ? 1 : 0 }
@@ -35,8 +35,9 @@ module YtMd
 
     def self.missing(wanted, tracks)
       available = Array(tracks).map { |raw| raw["languageCode"] }.compact.uniq.join(", ")
+      listed = available.empty? ? "(none)" : available
       Missing.new(
-        %(no caption track for language: received "#{wanted}", expected one of #{available.empty? ? "(none)" : available})
+        %(no caption track for language: received "#{wanted}", expected one of #{listed})
       )
     end
     private_class_method :new_from_list, :from_raw, :missing
@@ -56,7 +57,7 @@ module YtMd
       uri = URI.parse(base_url)
       params = URI.decode_www_form(uri.query.to_s)
       params.reject! { |key, _| key == "fmt" }
-      params << ["fmt", "json3"]
+      params << %w[fmt json3]
       uri.query = URI.encode_www_form(params)
       uri.to_s
     end

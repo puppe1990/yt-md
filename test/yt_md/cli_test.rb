@@ -47,7 +47,8 @@ class CliTest < YtMdTest
     timedtext_url = "https://www.youtube.com/api/timedtext?v=#{video_id}&lang=en&kind=asr"
     json3 = json3_body([{ start_ms: 160, text: [quote] }])
     http = FakeHttp.new(
-      posts: { video_id => player_for(video_id: video_id, title: title, channel: channel, timedtext_url: timedtext_url) },
+      posts: { video_id => player_for(video_id: video_id, title: title, channel: channel,
+                                      timedtext_url: timedtext_url) },
       gets: { "#{timedtext_url}&fmt=json3" => json3 }
     )
     {
