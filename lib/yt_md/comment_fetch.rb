@@ -30,13 +30,20 @@ module YtMd
       %(comments unavailable for #{video_id}: received no sort token, expected Top or Newest)
     end
 
+    # The pinned comment appears twice: once at the top of page 1 and again in
+    # its chronological slot near the end. Collected ids are tracked so the
+    # second copy does not inflate the totals.
     def collect(token, limit)
       comments = []
       seen_tokens = {}
+      seen_ids = {}
       while token && !seen_tokens[token]
         seen_tokens[token] = true
         page = CommentPage.new(next_page("continuation" => token))
         page.entries.each do |entry|
+          next if seen_ids[entry.comment.id]
+
+          seen_ids[entry.comment.id] = true
           comments << entry.comment
           return [comments, true] if limit && comments.length >= limit
 
@@ -53,10 +60,16 @@ module YtMd
     def fetch_replies(entry)
       token = entry.reply_token
       seen_tokens = {}
+      seen_ids = {}
       while token && !seen_tokens[token]
         seen_tokens[token] = true
         page = CommentPage.new(next_page("continuation" => token))
-        page.entries.each { |reply| entry.comment.replies << reply.comment }
+        page.entries.each do |reply|
+          next if seen_ids[reply.comment.id]
+
+          seen_ids[reply.comment.id] = true
+          entry.comment.replies << reply.comment
+        end
         token = page.next_token || page.more_replies_token
       end
     end

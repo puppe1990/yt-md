@@ -194,7 +194,7 @@ class YtMdTest < Minitest::Test
     mutations = []
     rows.each do |row|
       key = "entity-#{Faker::Alphanumeric.alphanumeric(number: 12)}"
-      comment_id = Faker::Alphanumeric.alphanumeric(number: 24)
+      comment_id = row[:comment_id] || Faker::Alphanumeric.alphanumeric(number: 24)
       mutations << comment_entity(key, comment_id, row, level: level)
       view = { "commentKey" => key, "commentId" => comment_id }
       view["pinnedText"] = row[:pinned] if row[:pinned]
