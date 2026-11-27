@@ -72,6 +72,33 @@ class CommentFetchTest < YtMdTest
     assert_equal ["child one", "child two"], thread.comments.first.replies.map(&:text)
   end
 
+  def test_skips_a_pinned_comment_that_returns_in_its_chronological_slot
+    page = comments_page_json(
+      [{ author: "@a", text: "pinned one", comment_id: "pinned" }],
+      next_token: "page-2"
+    )
+    # Same comment id comes back on the last page, without the pinned marker.
+    repeat = comments_page_json([{ author: "@a", text: "pinned one", comment_id: "pinned" }])
+    fixture = sample(page: page)
+    fixture[:http].posts["page-2"] = repeat
+
+    thread = YtMd::CommentFetch.new(http: fixture[:http]).call(fixture[:video_id])
+
+    assert_equal ["pinned one"], thread.comments.map(&:text)
+  end
+
+  def test_skips_a_reply_returned_twice
+    page = comments_page_json([{ author: "@a", text: "parent", replies: 2 }], reply_token: "reply-token")
+    first = comments_page_json([{ author: "@r", text: "child", comment_id: "r1" }], level: 1, more_token: "more-token")
+    repeat = comments_page_json([{ author: "@r", text: "child", comment_id: "r1" }], level: 1)
+    fixture = sample(page: page, replies: first)
+    fixture[:http].posts["more-token"] = repeat
+
+    thread = YtMd::CommentFetch.new(http: fixture[:http]).call(fixture[:video_id])
+
+    assert_equal ["child"], thread.comments.first.replies.map(&:text)
+  end
+
   def test_limit_stops_and_marks_truncated
     rows = [{ author: "@a", text: "one" }, { author: "@b", text: "two" }, { author: "@c", text: "three" }]
     fixture = sample(rows: rows)
