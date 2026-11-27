@@ -29,7 +29,21 @@ module YtMd
       page_items.filter_map { |item| item.dig(*NEXT_TOKEN) }.first
     end
 
+    # "Mostrar mais respostas" ends a reply page: the token hangs off the
+    # button's command, not off continuationEndpoint like the first page.
+    def more_replies_token
+      page_items.filter_map { |item| more_replies_token_of(item) }.first
+    end
+
     private
+
+    def more_replies_token_of(item)
+      button = item.dig("continuationItemRenderer", "button", "buttonRenderer")
+      return unless button
+
+      button.dig("command", "continuationCommand", "token") ||
+        button.dig("navigationEndpoint", "continuationCommand", "token")
+    end
 
     def entry_from(item)
       view = view_model(item)
@@ -58,10 +72,11 @@ module YtMd
     def comment_from(view)
       payload = @entities[view["commentKey"]] || {}
       properties = payload["properties"] || {}
+      author = payload["author"] || {}
       Comment.new(
         id: properties["commentId"] || view["commentId"],
-        author: payload.dig("author", "displayName"),
-        creator: payload.dig("author", "isCreator") == true,
+        author: author["displayName"],
+        creator: author["isCreator"] == true,
         text: properties.dig("content", "content").to_s,
         published: properties["publishedTime"],
         likes: count(payload.dig("toolbar", "likeCountNotliked") || payload.dig("toolbar", "likeCountLiked")),

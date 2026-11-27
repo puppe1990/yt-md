@@ -11,7 +11,7 @@ module YtMd
     end
 
     def call(video_id, sort: :top, limit: nil)
-      panel = CommentPanel.new(next_page("videoId" => video_id), video_id: video_id).parse
+      panel = CommentPanel.new(watch_page(video_id), video_id: video_id).parse
       token = panel.sort_token(sort)
       raise CommentPanel::Disabled, missing_token_message(video_id) unless token
 
@@ -48,7 +48,8 @@ module YtMd
     end
 
     # Replies paginate on their own token; a thread shows only the first ones
-    # until the "view replies" continuation is followed.
+    # until the "view replies" continuation is followed. Long threads then end
+    # with a "show more replies" button that carries yet another token.
     def fetch_replies(entry)
       token = entry.reply_token
       seen_tokens = {}
@@ -56,12 +57,13 @@ module YtMd
         seen_tokens[token] = true
         page = CommentPage.new(next_page("continuation" => token))
         page.entries.each { |reply| entry.comment.replies << reply.comment }
-        token = page.next_token
+        token = page.next_token || page.more_replies_token
       end
     end
 
     def meta_from(panel, video_id)
       {
+        video_id: video_id,
         title: panel.title,
         channel: panel.channel,
         url: "https://www.youtube.com/watch?v=#{video_id}",
@@ -70,8 +72,19 @@ module YtMd
     end
 
     def next_page(identity)
-      body = @http.post(Innertube::NEXT_URL, json: Innertube::WEB_COMMENTS.merge(identity))
-      JSON.parse(body)
+      JSON.parse(post(Innertube::WEB_COMMENTS, identity))
+    end
+
+    # The watch page is requested in English so the title keeps the name the
+    # creator published instead of a YouTube localized translation. The sort
+    # token it yields still works with the Portuguese continuation requests,
+    # which is what keeps "há 6 dias" in the dates.
+    def watch_page(video_id)
+      JSON.parse(post(Innertube::WEB, "videoId" => video_id))
+    end
+
+    def post(context, identity)
+      @http.post(Innertube::NEXT_URL, json: context.merge(identity))
     end
   end
 end

@@ -43,6 +43,36 @@ class CommentPageTest < YtMdTest
     assert_equal "reply", entry.comment.text
   end
 
+  def test_reads_the_show_more_replies_button_token
+    page = YtMd::CommentPage.new(
+      "onResponseReceivedEndpoints" => [
+        { "appendContinuationItemsAction" => { "continuationItems" => [
+          { "commentViewModel" => { "commentKey" => "k", "commentId" => "c1" } },
+          {
+            "continuationItemRenderer" => {
+              "button" => {
+                "buttonRenderer" => {
+                  "text" => { "runs" => [{ "text" => "Mostrar mais respostas" }] },
+                  "command" => { "continuationCommand" => { "token" => "more-token" } }
+                }
+              }
+            }
+          }
+        ] } }
+      ]
+    )
+
+    assert_equal "more-token", page.more_replies_token
+    assert_nil page.next_token
+  end
+
+  def test_more_replies_token_is_nil_without_a_button
+    json = comments_page_json([{ author: "@a", text: "hi" }])
+    page = YtMd::CommentPage.new(JSON.parse(json))
+
+    assert_nil page.more_replies_token
+  end
+
   def test_falls_back_when_entities_are_missing
     page = YtMd::CommentPage.new(
       "onResponseReceivedEndpoints" => [

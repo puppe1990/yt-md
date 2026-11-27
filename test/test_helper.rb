@@ -130,7 +130,7 @@ class YtMdTest < Minitest::Test
   end
 
   def comments_watch_json(title: fake_title, channel: fake_channel,
-                          count: "9", sorts: %w[Top Newest], tokens: nil, disabled: false)
+                          count: "9", sorts: %w[Top Newest], tokens: nil, disabled: false, collab: false)
     tokens ||= sorts.map { |sort| "#{sort.downcase}-token-#{Faker::Alphanumeric.alphanumeric(number: 8)}" }
     panels = []
     unless disabled
@@ -168,7 +168,7 @@ class YtMdTest < Minitest::Test
                 },
                 {
                   "videoSecondaryInfoRenderer" => {
-                    "owner" => { "videoOwnerRenderer" => { "title" => { "runs" => [{ "text" => channel }] } } }
+                    "owner" => { "videoOwnerRenderer" => owner_view(channel, collab) }
                   }
                 }
               ]
@@ -180,9 +180,16 @@ class YtMdTest < Minitest::Test
     )
   end
 
+  # Collab videos ship `attributedTitle.content` and no `title`.
+  def owner_view(channel, collab)
+    return { "attributedTitle" => { "content" => channel } } if collab
+
+    { "title" => { "runs" => [{ "text" => channel }] } }
+  end
+
   # One continuation page: thread/reply items plus their frameworkUpdates
   # entities. Each row is { author:, text:, likes:, published:, replies: n }.
-  def comments_page_json(rows, next_token: nil, reply_token: nil, level: 0, reply_rows: nil)
+  def comments_page_json(rows, next_token: nil, reply_token: nil, level: 0, reply_rows: nil, more_token: nil)
     items = []
     mutations = []
     rows.each do |row|
@@ -197,6 +204,7 @@ class YtMdTest < Minitest::Test
     end
     fill_reply_rows(items, mutations, reply_rows) if reply_rows
     items << comments_continuation(next_token) if next_token
+    items << show_more_button(more_token) if more_token
     JSON.generate(
       "onResponseReceivedEndpoints" => [
         { "reloadContinuationItemsCommand" => { "continuationItems" => items } }
@@ -218,7 +226,12 @@ class YtMdTest < Minitest::Test
           },
           "author" => {
             "displayName" => row.fetch(:author),
-            "isCreator" => row[:creator] == true
+            "isCreator" => row[:creator] == true,
+            "channelCommand" => {
+              "innertubeCommand" => {
+                "browseEndpoint" => { "canonicalBaseUrl" => "/#{row.fetch(:author)}" }
+              }
+            }
           },
           "toolbar" => {
             "likeCountNotliked" => row[:likes] || " ",
@@ -248,6 +261,21 @@ class YtMdTest < Minitest::Test
 
   def comments_continuation(token)
     videos_tab_continuation(token)
+  end
+
+  # Reply pages end with "Mostrar mais respostas": the token lives on the
+  # button's command, not on continuationEndpoint.
+  def show_more_button(token)
+    {
+      "continuationItemRenderer" => {
+        "button" => {
+          "buttonRenderer" => {
+            "text" => { "runs" => [{ "text" => "Mostrar mais respostas" }] },
+            "command" => { "continuationCommand" => { "token" => token } }
+          }
+        }
+      }
+    }
   end
 
   def threaded_replies?(level, reply_token, row)

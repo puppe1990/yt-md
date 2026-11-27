@@ -22,7 +22,7 @@ module YtMd
     def parse
       panel_header
       @title = primary_text("videoPrimaryInfoRenderer", "title")
-      @channel = secondary_text("videoSecondaryInfoRenderer", "owner", "videoOwnerRenderer", "title")
+      @channel = channel_text
       self
     end
 
@@ -58,8 +58,13 @@ module YtMd
       selected_renderer(renderer)&.dig(*keys, "runs", 0, "text").to_s
     end
 
-    def secondary_text(renderer, *keys)
-      primary_text(renderer, *keys)
+    # Collab videos replace `title` with `attributedTitle.content`
+    # ("Kelvin Cleto e Rodrigo Lopes"), so the channel needs both shapes.
+    def channel_text
+      owner = selected_renderer("videoSecondaryInfoRenderer")&.dig("owner", "videoOwnerRenderer") || {}
+      owner.dig("title", "runs", 0, "text").to_s.then do |text|
+        text.empty? ? owner.dig("attributedTitle", "content").to_s : text
+      end
     end
 
     def selected_renderer(renderer)

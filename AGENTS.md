@@ -25,8 +25,23 @@ timedtext. Channel `@handle` → Videos tab, one `.md` per video. Public CLI.
   `commentThreadRenderer.replies.commentRepliesRenderer.contents[0]`. Do not
   read `contents[0]` as a fixed index with `dig` — `dig` rejects integer paths,
   walk the array.
+- Long reply threads end with a "Mostrar mais respostas" button. Its token is
+  NOT on `continuationEndpoint`: it hangs off
+  `continuationItemRenderer.button.buttonRenderer.command.continuationCommand`.
+  Missing it silently truncates threads (a 379-comment video came back short by
+  26 replies), so `CommentPage#more_replies_token` must be followed.
 - Comments request `hl=pt` (`Innertube::WEB_COMMENTS`) so dates read "há 6 dias";
   captions stay `hl=en` (`Innertube::WEB`) to keep the `--lang` codes stable.
+- The comments watch page is fetched with `hl=en` (`Innertube::WEB`) so the
+  title stays the original ("It's Not Fun") instead of YouTube's pt translation
+  ("É chato"). The sort token from that page still works with the pt
+  continuations, so dates stay localized.
+- Collab videos replace `owner.title` with `owner.attributedTitle.content`
+  ("Kelvin Cleto e Rodrigo Lopes"); `CommentPanel#channel_text` reads both.
+- `--json` mirrors the capture shape scripts already consume: same key order,
+  `likes` as a string (`"0"` when blank), content flattened with JS `\s`
+  (NBSP included), `authorChannelUrl` built from the handle (Innertube
+  percent-encodes "ü"), and `parentContentPreview` cut at 179 UTF-16 units.
 - Markdown labels stay Portuguese (`Canal` / `Fonte` / `Faixa` / `Duração`).
   Identifiers stay English.
 - Default `--lang en`. Prefer a human track over ASR.
@@ -42,6 +57,7 @@ bin/mutate                # &&/|| swap mutants in lib/
 npm run ci                # Prettier + ESLint + RuboCop + suite + crap + dry
 ruby yt_md.rb URL [-o FILE] [--lang en] [--timestamps] [--json3 FILE] [--limit N]
 ruby yt_md.rb URL --comments [--sort top|newest] [-o FILE] [--limit N]
+ruby yt_md.rb URL --comments --json [-o FILE]
 ruby yt_md.rb @handle -o DIR [--limit N] [--sleep 0.4]
 ```
 
@@ -89,6 +105,7 @@ lib/yt_md/*.rb        one responsibility each
   comment_page.rb     one continuation page → Comment + reply token
   comment_fetch.rb    pages replies and threads; CommentThread meta
   markdown_comments.rb  comment threads → markdown
+  json_comments.rb    comment threads → capture-shaped JSON
 test/test_helper.rb   YtMdTest + factories
 test/yt_md/fake_innertube.rb
 test/yt_md/*_test.rb

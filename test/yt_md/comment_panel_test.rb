@@ -21,6 +21,12 @@ class CommentPanelTest < YtMdTest
     assert_equal "new-tok", panel.sort_token(:newest)
   end
 
+  def test_reads_the_channel_from_a_collab_attributed_title
+    panel = YtMd::CommentPanel.new(watch(channel: "Kelvin Cleto e Rodrigo Lopes", collab: true), video_id: "abc").parse
+
+    assert_equal "Kelvin Cleto e Rodrigo Lopes", panel.channel
+  end
+
   def test_raises_when_comments_are_disabled
     error = assert_raises(YtMd::CommentPanel::Disabled) do
       YtMd::CommentPanel.new(watch(disabled: true), video_id: "abc").parse

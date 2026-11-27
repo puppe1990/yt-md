@@ -28,7 +28,13 @@ module YtMd
         sort: options.sort,
         limit: options.limit
       )
-      write(MarkdownComments.new(thread: thread, sort: options.sort).to_s, options.output)
+      write(render_comments(thread, options), options.output)
+    end
+
+    def render_comments(thread, options)
+      return JsonComments.new(thread: thread, sort: options.sort).to_s if options.json
+
+      MarkdownComments.new(thread: thread, sort: options.sort).to_s
     end
 
     def run_channel(options)
