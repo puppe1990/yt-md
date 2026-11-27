@@ -14,12 +14,28 @@ module YtMd
     def run(argv)
       options = Options.parse(argv)
       return run_channel(options) if options.channel
+      return run_comments(options) if options.comments
 
       markdown = render(fetch(options), timestamps: options.timestamps)
       write(markdown, options.output)
     end
 
     private
+
+    def run_comments(options)
+      thread = CommentFetch.new(http: @http).call(
+        options.video_id,
+        sort: options.sort,
+        limit: options.limit
+      )
+      write(render_comments(thread, options), options.output)
+    end
+
+    def render_comments(thread, options)
+      return JsonComments.new(thread: thread, sort: options.sort).to_s if options.json
+
+      MarkdownComments.new(thread: thread, sort: options.sort).to_s
+    end
 
     def run_channel(options)
       videos = ChannelBrowse.new(http: @http).videos(options.channel, limit: options.limit)

@@ -35,6 +35,95 @@ ruby yt_md.rb TtOoLanFzGw --json3 captions.json3 -o entrevista.md
 
 Sem `-o`, o markdown vai para o stdout.
 
+## Comentários
+
+`--comments` troca a transcrição pelos comentários públicos do vídeo. O
+markdown traz o cabeçalho, cada thread como `###`, e as respostas citadas
+abaixo do comentário pai.
+
+```bash
+ruby yt_md.rb https://www.youtube.com/watch?v=rRI0iH-cpjg --comments
+ruby yt_md.rb rRI0iH-cpjg --comments --sort newest -o comentarios.md
+ruby yt_md.rb rRI0iH-cpjg --comments --limit 50
+```
+
+`--sort` aceita `top` (padrão, "principais") e `newest` ("mais recentes").
+`--limit` corta a coleta; nesse caso o cabeçalho mostra o total que o YouTube
+informa. Sem `--limit`, o CLI pagina até a última thread e as respostas de cada
+uma.
+
+Com `--json`, a saída vira um documento único com as métricas do cabeçalho e a
+lista `data` (threads com `replies` aninhadas):
+
+```bash
+ruby yt_md.rb rRI0iH-cpjg --comments --json -o comentarios.json
+```
+
+```json
+{
+  "url": "https://www.youtube.com/watch?v=rRI0iH-cpjg",
+  "videoId": "rRI0iH-cpjg",
+  "title": "It's Not Fun, But It Will Make You Rich",
+  "collectedAt": "2026-11-27T15:08:10.557Z",
+  "mode": "api",
+  "truncated": false,
+  "totalThreads": 220,
+  "totalReplies": 80,
+  "visibleCommentCount": null,
+  "expectedCommentCount": 351,
+  "data": [
+    {
+      "index": 1,
+      "commentId": "Ugz6OBPklGBWz8zjC5d4AaABAg",
+      "author": "@AlexHormozi",
+      "authorChannelUrl": "https://www.youtube.com/@AlexHormozi",
+      "content": "Download your free scaling roadmap here: …",
+      "published": "há 6 dias",
+      "likes": "19",
+      "isReply": false,
+      "repliesCount": 9,
+      "replies": [
+        {
+          "commentId": "Ugz6OBPklGBWz8zjC5d4AaABAg.AdSGUO94V7P…",
+          "author": "@mickeypitt",
+          "authorChannelUrl": "https://www.youtube.com/@mickeypitt",
+          "content": "Alex, welcome to the OODA Loop.",
+          "published": "há 4 dias",
+          "likes": "1",
+          "parentCommentId": "Ugz6OBPklGBWz8zjC5d4AaABAg",
+          "parentAuthor": "@AlexHormozi",
+          "parentContentPreview": "Download your free scaling roadmap here: …",
+          "replyIndex": 1,
+          "isReply": true
+        }
+      ]
+    }
+  ]
+}
+```
+
+Contadores ficam como texto (`"19"`, `"2,4 mil"`), porque o YouTube localiza
+números grandes. Comentário sem like vem `"0"`; `expectedCommentCount` só vira
+número quando o rótulo é puramente numérico. O `parentContentPreview` achata
+espaços e corta em 179 unidades UTF-16 com `...`.
+
+```markdown
+# É chato, mas vai te deixar rico — comentários
+
+- Canal: Alex Hormozi
+- Fonte: https://www.youtube.com/watch?v=rRI0iH-cpjg
+- Ordem: principais
+- Comentários: 220
+
+### @AlexHormozi · canal · há 6 dias · 19 likes
+
+Download your free scaling roadmap here: …
+
+**@mickeypitt · há 4 dias · 1 likes**
+
+> Alex, welcome to the OODA Loop.
+```
+
 ## Um canal
 
 Aceita `@handle`, URL `youtube.com/@handle`, `/channel/UCxx` e o id `UC…`.
@@ -60,14 +149,17 @@ entre um player e o próximo.
 
 ## Flags
 
-| Flag              | Padrão          | Efeito                                           |
-| ----------------- | --------------- | ------------------------------------------------ |
-| `-o`, `--output`  | stdout / handle | Arquivo do vídeo, ou pasta do canal              |
-| `--lang LANG`     | `en`            | Idioma da faixa. Prefere humana; senão ASR       |
-| `--timestamps`    | off             | Prefixa cada cue com o relógio (`**00:09**`)     |
-| `--json3 FILE`    | live            | Usa um timedtext json3 capturado no lugar do GET |
-| `--limit N`       | aba inteira     | Para a paginação depois de N vídeos              |
-| `--sleep SECONDS` | `0`             | Pausa entre vídeos no dump de canal              |
+| Flag              | Padrão          | Efeito                                             |
+| ----------------- | --------------- | -------------------------------------------------- |
+| `-o`, `--output`  | stdout / handle | Arquivo do vídeo, ou pasta do canal                |
+| `--lang LANG`     | `en`            | Idioma da faixa. Prefere humana; senão ASR         |
+| `--timestamps`    | off             | Prefixa cada cue com o relógio (`**00:09**`)       |
+| `--json3 FILE`    | live            | Usa um timedtext json3 capturado no lugar do GET   |
+| `--comments`      | off             | Comentários do vídeo no lugar da transcrição       |
+| `--json`          | off             | Comentários como JSON em vez de markdown           |
+| `--sort ORDER`    | `top`           | `top` (principais) ou `newest` (mais recentes)     |
+| `--limit N`       | aba inteira     | Para a paginação depois de N vídeos ou comentários |
+| `--sleep SECONDS` | `0`             | Pausa entre vídeos no dump de canal                |
 
 ## Markdown
 
@@ -101,6 +193,12 @@ Com `--timestamps`:
 2. Canal: `POST /youtubei/v1/navigation/resolve_url` resolve o `@handle` num
    browse id `UC…`, depois `POST /youtubei/v1/browse` na aba Videos até acabar
    a continuation ou bater o `--limit`.
+3. Comentários: `POST /youtubei/v1/next` (cliente WEB) no `videoId` devolve o
+   painel `engagement-panel-comments-section` e o token da ordenação. As páginas
+   seguintes vão em `next` com `continuation`. O texto de cada comentário não
+   vem no item: chega em `frameworkUpdates.entityBatchUpdate`, casado pela
+   `commentKey`. Threads longas terminam com um botão "Mostrar mais respostas",
+   cujo token fica em `continuationItemRenderer.button.buttonRenderer.command`.
 
 O HTTP é injetável. Os testes nunca batem no YouTube.
 

@@ -26,6 +26,7 @@ class FakeInnertube
   def post_key(url, json)
     return json.fetch("url") if url.include?("resolve_url")
     return json["continuation"] || json["browseId"] if url.include?("/browse")
+    return json["continuation"] || json.fetch("videoId") if url.include?("/next")
     return json.fetch("videoId") if player?(url)
 
     raise "unexpected POST #{url}"
