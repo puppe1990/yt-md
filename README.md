@@ -35,6 +35,40 @@ ruby yt_md.rb TtOoLanFzGw --json3 captions.json3 -o entrevista.md
 
 Sem `-o`, o markdown vai para o stdout.
 
+## Comentários
+
+`--comments` troca a transcrição pelos comentários públicos do vídeo. O
+markdown traz o cabeçalho, cada thread como `###`, e as respostas citadas
+abaixo do comentário pai.
+
+```bash
+ruby yt_md.rb https://www.youtube.com/watch?v=rRI0iH-cpjg --comments
+ruby yt_md.rb rRI0iH-cpjg --comments --sort newest -o comentarios.md
+ruby yt_md.rb rRI0iH-cpjg --comments --limit 50
+```
+
+`--sort` aceita `top` (padrão, "principais") e `newest` ("mais recentes").
+`--limit` corta a coleta; nesse caso o cabeçalho mostra o total que o YouTube
+informa. Sem `--limit`, o CLI pagina até a última thread e as respostas de cada
+uma.
+
+```markdown
+# É chato, mas vai te deixar rico — comentários
+
+- Canal: Alex Hormozi
+- Fonte: https://www.youtube.com/watch?v=rRI0iH-cpjg
+- Ordem: principais
+- Comentários: 220
+
+### @AlexHormozi · canal · há 6 dias · 19 likes
+
+Download your free scaling roadmap here: …
+
+**@mickeypitt · há 4 dias · 1 likes**
+
+> Alex, welcome to the OODA Loop.
+```
+
 ## Um canal
 
 Aceita `@handle`, URL `youtube.com/@handle`, `/channel/UCxx` e o id `UC…`.
@@ -60,14 +94,16 @@ entre um player e o próximo.
 
 ## Flags
 
-| Flag              | Padrão          | Efeito                                           |
-| ----------------- | --------------- | ------------------------------------------------ |
-| `-o`, `--output`  | stdout / handle | Arquivo do vídeo, ou pasta do canal              |
-| `--lang LANG`     | `en`            | Idioma da faixa. Prefere humana; senão ASR       |
-| `--timestamps`    | off             | Prefixa cada cue com o relógio (`**00:09**`)     |
-| `--json3 FILE`    | live            | Usa um timedtext json3 capturado no lugar do GET |
-| `--limit N`       | aba inteira     | Para a paginação depois de N vídeos              |
-| `--sleep SECONDS` | `0`             | Pausa entre vídeos no dump de canal              |
+| Flag              | Padrão          | Efeito                                             |
+| ----------------- | --------------- | -------------------------------------------------- |
+| `-o`, `--output`  | stdout / handle | Arquivo do vídeo, ou pasta do canal                |
+| `--lang LANG`     | `en`            | Idioma da faixa. Prefere humana; senão ASR         |
+| `--timestamps`    | off             | Prefixa cada cue com o relógio (`**00:09**`)       |
+| `--json3 FILE`    | live            | Usa um timedtext json3 capturado no lugar do GET   |
+| `--comments`      | off             | Comentários do vídeo no lugar da transcrição       |
+| `--sort ORDER`    | `top`           | `top` (principais) ou `newest` (mais recentes)     |
+| `--limit N`       | aba inteira     | Para a paginação depois de N vídeos ou comentários |
+| `--sleep SECONDS` | `0`             | Pausa entre vídeos no dump de canal                |
 
 ## Markdown
 
@@ -101,6 +137,11 @@ Com `--timestamps`:
 2. Canal: `POST /youtubei/v1/navigation/resolve_url` resolve o `@handle` num
    browse id `UC…`, depois `POST /youtubei/v1/browse` na aba Videos até acabar
    a continuation ou bater o `--limit`.
+3. Comentários: `POST /youtubei/v1/next` (cliente WEB) no `videoId` devolve o
+   painel `engagement-panel-comments-section` e o token da ordenação. As páginas
+   seguintes vão em `next` com `continuation`. O texto de cada comentário não
+   vem no item: chega em `frameworkUpdates.entityBatchUpdate`, casado pela
+   `commentKey`.
 
 O HTTP é injetável. Os testes nunca batem no YouTube.
 

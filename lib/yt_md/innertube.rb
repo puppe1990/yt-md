@@ -10,6 +10,8 @@ module YtMd
     PLAYER_URL = "https://www.youtube.com/youtubei/v1/player?prettyPrint=false"
     BROWSE_URL = "https://www.youtube.com/youtubei/v1/browse?prettyPrint=false"
     RESOLVE_URL = "https://www.youtube.com/youtubei/v1/navigation/resolve_url?prettyPrint=false"
+    # Comments live in the watch next payload, then page through continuations.
+    NEXT_URL = "https://www.youtube.com/youtubei/v1/next?prettyPrint=false"
     VIDEOS_TAB = "EgZ2aWRlb3PyBgQKAjoA"
     ANDROID_UA = "com.google.android.youtube/20.10.38 (Linux; U; Android 14) gzip"
     WEB_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) " \
@@ -31,6 +33,19 @@ module YtMd
           "clientVersion" => "2.20251120.01.00",
           "hl" => "en",
           "gl" => "US"
+        }
+      }
+    }.freeze
+    # Comment text is user content, so dates stay in Portuguese ("há 6 dias")
+    # to match the markdown header. sortFilterSubMenu titles are localized too;
+    # CommentPanel reads them by position instead.
+    WEB_COMMENTS = {
+      "context" => {
+        "client" => {
+          "clientName" => "WEB",
+          "clientVersion" => "2.20251120.01.00",
+          "hl" => "pt",
+          "gl" => "BR"
         }
       }
     }.freeze

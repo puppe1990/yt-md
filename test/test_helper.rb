@@ -128,4 +128,139 @@ class YtMdTest < Minitest::Test
   def resolve_url_json(browse_id)
     JSON.generate("endpoint" => { "browseEndpoint" => { "browseId" => browse_id } })
   end
+
+  def comments_watch_json(title: fake_title, channel: fake_channel,
+                          count: "9", sorts: %w[Top Newest], tokens: nil, disabled: false)
+    tokens ||= sorts.map { |sort| "#{sort.downcase}-token-#{Faker::Alphanumeric.alphanumeric(number: 8)}" }
+    panels = []
+    unless disabled
+      panels << {
+        "engagementPanelSectionListRenderer" => {
+          "panelIdentifier" => YtMd::CommentPanel::PANEL_ID,
+          "header" => {
+            "engagementPanelTitleHeaderRenderer" => {
+              "title" => { "runs" => [{ "text" => "Comentários" }] },
+              "contextualInfo" => { "runs" => [{ "text" => count }] },
+              "menu" => {
+                "sortFilterSubMenuRenderer" => {
+                  "subMenuItems" => sorts.each_with_index.map do |sort, index|
+                    {
+                      "title" => sort,
+                      "selected" => index.zero?,
+                      "serviceEndpoint" => { "continuationCommand" => { "token" => tokens[index] } }
+                    }
+                  end
+                }
+              }
+            }
+          }
+        }
+      }
+    end
+    JSON.generate(
+      "contents" => {
+        "twoColumnWatchNextResults" => {
+          "results" => {
+            "results" => {
+              "contents" => [
+                {
+                  "videoPrimaryInfoRenderer" => { "title" => { "runs" => [{ "text" => title }] } }
+                },
+                {
+                  "videoSecondaryInfoRenderer" => {
+                    "owner" => { "videoOwnerRenderer" => { "title" => { "runs" => [{ "text" => channel }] } } }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "engagementPanels" => panels
+    )
+  end
+
+  # One continuation page: thread/reply items plus their frameworkUpdates
+  # entities. Each row is { author:, text:, likes:, published:, replies: n }.
+  def comments_page_json(rows, next_token: nil, reply_token: nil, level: 0, reply_rows: nil)
+    items = []
+    mutations = []
+    rows.each do |row|
+      key = "entity-#{Faker::Alphanumeric.alphanumeric(number: 12)}"
+      comment_id = Faker::Alphanumeric.alphanumeric(number: 24)
+      mutations << comment_entity(key, comment_id, row, level: level)
+      view = { "commentKey" => key, "commentId" => comment_id }
+      view["pinnedText"] = row[:pinned] if row[:pinned]
+      thread = { "commentViewModel" => { "commentViewModel" => view } }
+      thread["replies"] = replies_renderer(reply_token, row[:replies]) if threaded_replies?(level, reply_token, row)
+      items << { "commentThreadRenderer" => thread }
+    end
+    fill_reply_rows(items, mutations, reply_rows) if reply_rows
+    items << comments_continuation(next_token) if next_token
+    JSON.generate(
+      "onResponseReceivedEndpoints" => [
+        { "reloadContinuationItemsCommand" => { "continuationItems" => items } }
+      ],
+      "frameworkUpdates" => { "entityBatchUpdate" => { "mutations" => mutations } }
+    )
+  end
+
+  def comment_entity(key, comment_id, row, level:)
+    {
+      "entityKey" => key,
+      "payload" => {
+        "commentEntityPayload" => {
+          "properties" => {
+            "commentId" => comment_id,
+            "content" => { "content" => row.fetch(:text) },
+            "publishedTime" => row[:published] || "há 1 dia",
+            "replyLevel" => level
+          },
+          "author" => {
+            "displayName" => row.fetch(:author),
+            "isCreator" => row[:creator] == true
+          },
+          "toolbar" => {
+            "likeCountNotliked" => row[:likes] || " ",
+            "replyCount" => row[:replies].to_s
+          }
+        }
+      }
+    }
+  end
+
+  def replies_renderer(reply_token, reply_count)
+    {
+      "commentRepliesRenderer" => {
+        "contents" => [
+          {
+            "continuationItemRenderer" => {
+              "continuationEndpoint" => {
+                "continuationCommand" => { "token" => reply_token }
+              }
+            }
+          }
+        ],
+        "viewReplies" => { "buttonRenderer" => { "text" => { "runs" => [{ "text" => "#{reply_count} replies" }] } } }
+      }
+    }
+  end
+
+  def comments_continuation(token)
+    videos_tab_continuation(token)
+  end
+
+  def threaded_replies?(level, reply_token, row)
+    level.zero? && !reply_token.nil? && row[:replies].to_i.positive?
+  end
+
+  def fill_reply_rows(items, mutations, reply_rows)
+    thread = items.first["commentThreadRenderer"]
+    thread["replies"]["commentRepliesRenderer"]["contents"] = reply_rows.map do |row|
+      key = "reply-#{Faker::Alphanumeric.alphanumeric(number: 12)}"
+      comment_id = Faker::Alphanumeric.alphanumeric(number: 24)
+      mutations << comment_entity(key, comment_id, row, level: 1)
+      { "commentViewModel" => { "commentViewModel" => { "commentKey" => key, "commentId" => comment_id } } }
+    end
+  end
 end
